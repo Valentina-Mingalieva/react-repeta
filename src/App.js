@@ -1,5 +1,6 @@
 import './App.css';
 import React, { Component } from 'react';
+import shortid from 'shortid';
 
 import Container from './Components/Container';
 
@@ -10,6 +11,8 @@ import Box from './Components/Box';
 import Counter from './Components/Counter';
 import Dropdown from './Components/Dropdown';
 import ToDoList from './Components/ToDoList';
+import TodoEditor from './Components/TodoEditor';
+import Filter from './Components/Filter';
 import initialTodos from './Sources/todos.json';
 
 const colorPickerOptions = [
@@ -24,6 +27,7 @@ const colorPickerOptions = [
 class App extends Component {
   state = {
     todos: initialTodos,
+    filter: '',
   };
 
   deleteTodo = todoId => {
@@ -32,14 +36,45 @@ class App extends Component {
     }));
   };
 
-  render() {
-    const { todos } = this.state;
-    const totalTodoCount = todos.length;
+  toggleCompleted = todoId => {
+    this.setState(({ todos }) => ({
+      todos: todos.map(todo =>
+        todo.id === todoId ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    }));
+  };
 
-    const completedTodoCount = todos.reduce(
-      (acc, todo) => (todo.completed ? acc + 1 : acc),
-      0,
-    );
+  addTodo = text => {
+    const todo = {
+      id: shortid.generate(),
+      text,
+      completed: false,
+    };
+    this.setState(({ todos }) => ({
+      todos: [todo, ...todos],
+    }));
+  };
+
+  changeFilter = e => {
+    this.setState({ filter: e.currentTarget.value });
+  };
+
+  getVisibleTodos = () => {
+    const { filter, todos } = this.state;
+    const normFilter = filter.toLowerCase();
+    return todos.filter(todo => todo.text.toLowerCase().includes(normFilter));
+  };
+
+  calcCompletedTodos = () => {
+    const { todos } = this.state;
+    return todos.reduce((acc, todo) => (todo.completed ? acc + 1 : acc), 0);
+  };
+
+  render() {
+    const { todos, filter } = this.state;
+    const totalTodoCount = todos.length;
+    const completedTodoCount = this.calcCompletedTodos();
+    const visibleTodos = this.getVisibleTodos();
 
     return (
       <Container>
@@ -63,11 +98,17 @@ class App extends Component {
         <Dropdown />
 
         <h2>ToDoList</h2>
+        <TodoEditor onSubmit={this.addTodo} />
+        <Filter value={filter} onChange={this.changeFilter} />
         <div>
           <span>Total: {totalTodoCount}</span>
           <span>Done: {completedTodoCount}</span>
         </div>
-        <ToDoList todos={todos} onDeleteTodo={this.deleteTodo} />
+        <ToDoList
+          todos={visibleTodos}
+          onDeleteTodo={this.deleteTodo}
+          onToggleCompleted={this.toggleCompleted}
+        />
       </Container>
     );
   }
